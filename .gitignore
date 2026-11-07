@@ -1,0 +1,24 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+build/
+
+# Dados gerados em runtime
+agents/recursos/db.json
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.angular/

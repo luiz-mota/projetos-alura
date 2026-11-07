@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ADEFISCO — Auditoria SUS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050c18; --card: #0a1628; --border: #132238;
+      --accent: #00c48c; --text: #e4edf8; --muted: #6b85a3;
+      --danger: #ff5f57; --warn: #febc2e;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 6%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0;
+      background: rgba(5,12,24,.95);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+    .logo { font-size: 1.25rem; font-weight: 900; letter-spacing: 2px; color: var(--accent); }
+    .logo span { color: var(--text); }
+    .header-tag { color: var(--muted); font-size: .78rem; background: var(--card); border: 1px solid var(--border); padding: .25rem .75rem; border-radius: 999px; }
+
+    main { max-width: 1000px; margin: 0 auto; padding: 3rem 4%; }
+
+    .page-title { font-size: 1.5rem; font-weight: 900; margin-bottom: .4rem; }
+    .page-sub { color: var(--muted); font-size: .9rem; margin-bottom: 2.5rem; }
+
+    /* Upload */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .25s, background .25s;
+      background: var(--card);
+      margin-bottom: 1rem;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(0,196,140,.04); }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .upload-zone h3 { font-size: 1rem; margin-bottom: .4rem; }
+    .upload-zone p { color: var(--muted); font-size: .83rem; }
+    #fileInput { display: none; }
+
+    .sample-link { text-align: center; margin-bottom: 2.5rem; }
+    .sample-link a { color: var(--accent); font-size: .83rem; text-decoration: none; }
+    .sample-link a:hover { text-decoration: underline; }
+
+    /* Loading */
+    #loading { display: none; text-align: center; padding: 3.5rem 0; }
+    .spinner {
+      width: 42px; height: 42px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    #results { display: none; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; }
+    .stat-card .num { font-size: 2.2rem; font-weight: 900; }
+    .stat-card .lbl { color: var(--muted); font-size: .75rem; margin-top: .2rem; }
+
+    .ia-box { background: var(--card); border: 1px solid rgba(0,196,140,.2); border-radius: 12px; padding: 1.4rem; margin-bottom: 2rem; }
+    .ia-box h3 { color: var(--accent); font-size: .9rem; margin-bottom: .75rem; }
+    .ia-box pre { color: #b0c4d8; font-size: .875rem; line-height: 1.75; white-space: pre-wrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    .actions { display: flex; gap: .75rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .6rem 1.3rem; border-radius: 8px;
+      font-weight: 700; font-size: .875rem;
+      cursor: pointer; border: none; transition: all .2s; text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: #050c18; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0,196,140,.4); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    .section-title { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-size: .75rem; }
+
+    .table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th { background: var(--card); color: var(--muted); padding: .65rem 1rem; text-align: left; font-size: .68rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: .7rem 1rem; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: top; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    .badge { padding: 2px 8px; border-radius: 4px; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+    .badge-erro { background: rgba(255,95,87,.15); color: var(--danger); }
+    .badge-aviso { background: rgba(254,188,46,.15); color: var(--warn); }
+
+    code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 3px; font-size: .78rem; color: #5aadff; font-family: monospace; }
+
+    .empty-ok { color: var(--accent); font-size: .9rem; padding: 1.5rem; background: rgba(0,196,140,.05); border: 1px solid rgba(0,196,140,.15); border-radius: 10px; }
+
+    footer { text-align: center; color: var(--muted); font-size: .75rem; padding: 2rem 6%; border-top: 1px solid var(--border); margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ADE<span>FISCO</span></div>
+  <span class="header-tag">Auditoria SUS — MVP</span>
+</header>
+
+<main>
+  <h1 class="page-title">Auditoria Inteligente de Produção SUS</h1>
+  <p class="page-sub">Envie o arquivo BPA (CSV) do município para análise automática de inconsistências e risco de glosa.</p>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📂</div>
+    <h3>Arraste o arquivo CSV ou clique para selecionar</h3>
+    <p>Formato BPA simplificado &bull; Apenas .csv &bull; Máx. 10 MB</p>
+    <input type="file" id="fileInput" accept=".csv">
+  </div>
+
+  <div class="sample-link" id="sampleLink">
+    <a href="/sample_data/bpa_amostra.csv" download>⬇ Baixar arquivo de teste (bpa_amostra.csv)</a>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted)">Analisando arquivo com IA ADEFISCO...</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="cards" id="statsCards"></div>
+    <div class="ia-box" id="iaBox" style="display:none">
+      <h3>🤖 Análise da IA ADEFISCO</h3>
+      <pre id="iaText"></pre>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="abrirRelatorio()">📄 Ver Relatório Completo</button>
+      <button class="btn btn-outline" onclick="resetar()">↩ Novo arquivo</button>
+    </div>
+    <div class="section-title">Inconsistências encontradas</div>
+    <div class="table-wrap" id="tableContainer"></div>
+  </div>
+</main>
+
+<footer>ADEFISCO — Inteligência Artificial para Faturamento SUS &bull; © 2026</footer>
+
+<script>
+  let auditId = null;
+
+  const dropzone  = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) processar(f);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) processar(fileInput.files[0]); });
+
+  async function processar(file) {
+    dropzone.style.display = 'none';
+    document.getElementById('sampleLink').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    const fd = new FormData();
+    fd.append('arquivo', file);
+
+    try {
+      const res  = await fetch('/api/auditar', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (!res.ok) { alert(data.detail || 'Erro ao processar arquivo.'); resetar(); return; }
+
+      auditId = data.id;
+      renderizar(data);
+    } catch (e) {
+      alert('Erro de conexão: ' + e.message);
+      resetar();
+    }
+  }
+
+  function renderizar(data) {
+    document.getElementById('loading').style.display = 'none';
+
+    const pct = Math.round((1 - data.erros / Math.max(data.total_registros, 1)) * 100);
+    const cor = pct >= 90 ? '#00c48c' : pct >= 70 ? '#febc2e' : '#ff5f57';
+
+    document.getElementById('statsCards').innerHTML = `
+      <div class="stat-card"><div class="num">${data.total_registros}</div><div class="lbl">Registros analisados</div></div>
+      <div class="stat-card"><div class="num" style="color:#ff5f57">${data.erros}</div><div class="lbl">Erros críticos</div></div>
+      <div class="stat-card"><div class="num" style="color:#febc2e">${data.avisos}</div><div class="lbl">Avisos</div></div>
+      <div class="stat-card"><div class="num" style="color:${cor}">${pct}%</div><div class="lbl">Conformidade</div></div>
+    `;
+
+    if (data.analise_ia) {
+      document.getElementById('iaBox').style.display = 'block';
+      document.getElementById('iaText').textContent  = data.analise_ia;
+    }
+
+    const inc = data.inconsistencias;
+    if (!inc.length) {
+      document.getElementById('tableContainer').innerHTML =
+        '<div class="empty-ok">✅ Nenhuma inconsistência encontrada. Arquivo em conformidade.</div>';
+    } else {
+      const rows = inc.map(i => `
+        <tr>
+          <td>${i.linha}</td>
+          <td>${i.campo}</td>
+          <td><code>${String(i.valor).slice(0, 28)}</code></td>
+          <td><span class="badge badge-${i.tipo}">${i.tipo.toUpperCase()}</span></td>
+          <td>${i.descricao}</td>
+          <td style="color:var(--muted);font-size:.8rem">${i.sugestao}</td>
+        </tr>`).join('');
+
+      document.getElementById('tableContainer').innerHTML = `
+        <table>
+          <thead><tr>
+            <th>Linha</th><th>Campo</th><th>Valor</th><th>Tipo</th>
+            <th>Descrição</th><th>Sugestão de Correção</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    document.getElementById('results').style.display = 'block';
+  }
+
+  function abrirRelatorio() {
+    if (auditId) window.open(`/api/relatorio/${auditId}`, '_blank');
+  }
+
+  function resetar() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+    dropzone.style.display = 'block';
+    document.getElementById('sampleLink').style.display = 'block';
+    fileInput.value = '';
+    auditId = null;
+  }
+</script>
+</body>
+</html>
